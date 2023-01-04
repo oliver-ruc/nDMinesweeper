@@ -3,6 +3,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.naming.InitialContext;
+
 public class Tensor<T> {
     private ArrayList<T> members;
     private final int[] dimensions;
@@ -130,6 +132,16 @@ public class Tensor<T> {
         return result;
     }
 
+    public int[] firstIndicesOf(T obj) {
+        for (int i = 0; i < this.getDimensionTotal(); i++) {
+            int[] indices = this.getDimensionIndices(i);
+            T cmp = this.get(indices);
+            if (obj.equals(cmp)) {
+                return indices;
+            }
+        }
+        return null;
+    }
     /*
     @Override
     public String toString() {

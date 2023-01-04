@@ -3,6 +3,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class nDMinesweeper {
@@ -71,8 +72,9 @@ public class nDMinesweeper {
             }
         }
 
+        printBoard(board);
+
         while(true) {
-            printBoard(board);
             System.out.println("Please Enter Selection Square"); 
             String input = sc.nextLine();
             String[] inputs = input.split(" ");
@@ -126,6 +128,35 @@ public class nDMinesweeper {
                 System.out.println("BOOM! You lose!");
                 break;
             }
+
+            if (chosen.tileState == TileState.UNCOVERED && chosen.numNeighbors == 0) {
+                Set<Tile> fillUncover = new HashSet<>();
+                fillUncover.add(chosen);
+
+                Set<Tile> checked = new HashSet<>();
+                while (checked.size() < fillUncover.size()) {
+                    Set<Tile> toAdd = new HashSet<>();
+                    for(Tile tile : fillUncover) {
+                        if (checked.contains(tile)) {
+                            continue;
+                        }
+                        tile.tileState = TileState.UNCOVERED;
+                        checked.add(tile);
+                        if (tile.numNeighbors == 0) {
+                            int[] tileIndices = board.firstIndicesOf(tile);
+                            toAdd.addAll(
+                                getNeighbors(tileIndices, dimensions).stream().map(
+                                    (int[] ints) -> {return board.get(ints);}
+                                ).collect(Collectors.toList())
+                            );
+                        }
+                    }
+                    fillUncover.addAll(toAdd);
+                }
+            }
+
+            printBoard(board);
+            
             boolean won = checkWin(board);
             if (won) {
                 System.out.println("You won!");
@@ -393,26 +424,16 @@ public class nDMinesweeper {
     }
 
     public static boolean checkWin(Tensor<Tile> board) {
-        boolean won = true;
-        for (int i = 0; i < board.getDimensionTotal(); i++) {
-            Tile t = board.get(board.getDimensionIndices(i));
-            if (t.isBomb) {
-                won &= t.tileState == TileState.COVERED || t.tileState == TileState.FLAGGED;
-            } else {
-                won &= t.tileState == TileState.UNCOVERED;
-            }
-        }
-        /*
+        boolean[] won = new boolean[] {true};
         board.forEach(
             (Tile t) -> {
                 if (t.isBomb) {
-                    won &= t.tileState == TileState.COVERED || t.tileState == TileState.FLAGGED;
+                    won[0] &= t.tileState == TileState.COVERED || t.tileState == TileState.FLAGGED;
                 } else {
-                    won &= t.tileState == TileState.UNCOVERED;
+                    won[0] &= t.tileState == TileState.UNCOVERED;
                 }
             }
         );
-        */
-        return won;
+        return won[0];
     }
 }
