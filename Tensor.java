@@ -3,6 +3,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * A Tensor is an mutli-dimensional array that has a 
+ * configuarable number of dimensions and length for
+ * each of the dimensions of the Tensor. The Tensor 
+ * can be indexed through an int array to get the
+ * element of the Tensor at a certain set of indices.
+ */
 public class Tensor<T> {
     private ArrayList<T> members;
     private final int[] dimensions;
@@ -12,7 +19,8 @@ public class Tensor<T> {
     private final int dimensionTotal;
 
     /**
-     * Creates a Tensor with the given dimensions, or a single element with no dimensions otherwise. 
+     * Creates a Tensor with the given dimensions, 
+     * or a single element with no dimensions otherwise. 
      * Each element in the Tensor is initialized to null.
      * @param dimensions the dimensions of the tensor
      */
