@@ -25,10 +25,11 @@ public class nDMinesweeper {
             }
         }
         
-        int total = 1;
-        for (int e : dimensions) {
-            total *= e;
-        }
+        Tensor<Tile> board = new Tensor<>(
+            Tile::new,
+            dimensions
+        );
+        System.out.println("Total Tiles: " + board.getDimensionTotal());
 
         int bombs;
         while (true) {
@@ -40,20 +41,14 @@ public class nDMinesweeper {
                 System.out.println("Bad input (number of bombs)");
                 continue;
             }
-            if (0 <= bombs && bombs <= total) {
+            if (0 <= bombs && bombs <= board.getDimensionTotal()) {
                 break;
             }
             System.out.println("Bad number of bombs");
         }
 
-        Tensor<Tile> board = new Tensor<>(
-            Tile::new,
-            dimensions
-        );
-        System.out.println("Total Tiles: " + total);
-
         ArrayList<Integer> shuffledTileIndices = new ArrayList<>();
-        IntStream.range(0, total).forEach(e -> shuffledTileIndices.add(e));
+        IntStream.range(0, board.getDimensionTotal()).forEach(e -> shuffledTileIndices.add(e));
         Collections.shuffle(shuffledTileIndices);
 
         for (int i = 0; i < bombs; i++) {
@@ -105,7 +100,7 @@ public class nDMinesweeper {
                 System.out.println("Bad input (not integers)");
                 continue;
             }
-            if (!board.isInBounds(indices)) {
+            if (!board.inBounds(indices)) {
                 System.out.println("Bad input (indicies out of bounds)");
                 continue;
             }
@@ -124,12 +119,8 @@ public class nDMinesweeper {
                 case UNCOVERED:
                     break;
             }
-            if (chosen.tileState == TileState.UNCOVERED && chosen.isBomb) {
-                System.out.println("BOOM! You lose!");
-                break;
-            }
 
-            if (chosen.tileState == TileState.UNCOVERED && chosen.numNeighbors == 0) {
+            if (!chosen.isBomb && chosen.tileState == TileState.UNCOVERED && chosen.numNeighbors == 0) {
                 Set<Tile> fillUncover = new HashSet<>();
                 fillUncover.add(chosen);
 
@@ -155,10 +146,13 @@ public class nDMinesweeper {
                 }
             }
 
-            printBoard(board);
             
-            boolean won = checkWin(board);
-            if (won) {
+            if (chosen.tileState == TileState.UNCOVERED && chosen.isBomb) {
+                System.out.println("BOOM! You lose!");
+                break;
+            }
+
+            if (checkWin(board)) {
                 System.out.println("You won!");
                 break;
             }
@@ -167,6 +161,13 @@ public class nDMinesweeper {
         sc.close();
     }
 
+    /**
+     * Checks if two indices (assumed to be of same length) are neighbors (differ in each dimensions by at most 1).
+     * A set of indices is not a neighbor to itself
+     * @param first the first set of indices to check
+     * @param second the second set of indices to check
+     * @return true if the neighbors are equal, and false otherwise
+     */
     public static boolean areNeighbors(int[] first, int[] second) {
         if (first.equals(second)) {
             return false;
@@ -178,6 +179,13 @@ public class nDMinesweeper {
         return result;
     }
 
+    /**
+     * Gets all the neighbors (indices whose every dimensions differs by at most 1) of a given set of indices within certain dimensions.
+     * A set of indices are not a neighbor to itself
+     * @param indicies The set of indices of whose neighbors to find
+     * @param dimensions The dimensions that the indices are a part of (for bounds checking)
+     * @return A set containing all the neighbors of the indices within the dimensions
+     */
     public static Set<int[]> getNeighbors(int[] indicies, int[] dimensions) {
         Set<int[]> neighbors = new HashSet<>();
         int maxNeighbors = 1;
@@ -210,6 +218,13 @@ public class nDMinesweeper {
         return neighbors;
     }
 
+    /**
+     * Checks if a given set of indices is in bounds (in the range [0,dimension[i]) for each index) of a certain set of dimensions.
+     * Does not check that indices matches length with dimensions
+     * @param indices The set of indices to check
+     * @param dimensions The bounding dimensions for the indices to be in
+     * @return true if all the indices in the indices are in bounds, false otherwise
+     */
     public static boolean isInBounds(int[] indices, int[] dimensions) {
         boolean inBounds = true;
         for (int i = 0; i < dimensions.length; i++) {
@@ -218,6 +233,11 @@ public class nDMinesweeper {
         return inBounds;
     }
     
+    /**
+     * Gets a human-readable form of an int array
+     * @param ints the int array
+     * @return a string with the ints in it
+     */
     public static String printInts(int[] ints) {
         String result = "";
         result += "[";
@@ -231,6 +251,12 @@ public class nDMinesweeper {
         return result;
     }
 
+    /**
+     * Adds two arrays back to back with each other. My utils.Arrays is broken, before you mention it
+     * @param first the first array in the new array
+     * @param second the second array in the new array
+     * @return a new array with first and second concatonated
+     */
     public static int[] concatonateIntArrays(int[] first, int[] second) {
         int[] total = new int[first.length + second.length];
         for (int i = 0; i < first.length; i++) {
@@ -242,6 +268,10 @@ public class nDMinesweeper {
         return total;
     }
 
+    /**
+     * Draw the board
+     * @param board the board to draw
+     */
     public static void printBoard(Tensor<Tile> board) {
         int[] dimensions = board.getDimensions();
         Tensor<String[]> boards;
@@ -360,6 +390,12 @@ public class nDMinesweeper {
         }
     }
 
+    /**
+     * Wraps a given String array in a box where each line is padded to meet the maximum string's length, and then a box with
+     * "-" for top and bottom, "|" for sides, and "+" for corners
+     * @param contents The String array to be padded and boxed
+     * @return a new array with the contents wrapped in a box
+     */
     public static String[] boxWrap(String[] contents) {
         int max = 0;
         for (int i = 0; i < contents.length; i++) {
@@ -383,6 +419,13 @@ public class nDMinesweeper {
         return result;
     }
 
+    /**
+     * Pads the unpadded string with the padding until its length is greater than or equal to paddedLength
+     * @param unpadded the unpadded string
+     * @param paddedLength the desiried (minimum) length
+     * @param padding the padding to be repeatively added to the string
+     * @return the unpadded string with the minimum number of multiples of the padding to reach paddedLength (or greater)
+     */
     public static String padRight(String unpadded, int paddedLength, String padding) {
         String result = unpadded;
         while (result.length() < paddedLength) {
@@ -391,38 +434,50 @@ public class nDMinesweeper {
         return result;
     }
 
+    /**
+     * Simple method to add the string of two equal-size String arrays, element by element
+     * @param left the String array whose elements will be on the left
+     * @param right the String array whose elements will be on the right
+     * @param separator an optional (nullable) separator to add between the left and right elements
+     * @return a new array where each element is the concatonation of the corresponding left element, the separator, and right element
+     */
     public static String[] conjoinHorizontal(String[] left, String[] right, String separator) {
         String[] combined = new String[left.length];
+        separator = separator == null ? "" : separator;
         for (int i = 0; i < left.length; i++) {
             combined[i] = left[i] + separator + right[i];
         }
         return combined;
     }
 
-    public static String[] conjoinVertical(String[] top, String[] bottom, String lineSeperator) {
-        if (lineSeperator == null) {
-            String[] combined = new String[top.length + bottom.length];
-            for (int i = 0; i < top.length; i++) {
-                combined[i] = top[i];
-            }
-            for (int i = 0; i < bottom.length; i++) {
-                combined[top.length + i] = bottom[i];
-            }
-            return combined;
-        }
+    /**
+     * Adds two String arrays back to back with an optional String inserted between the two
+     * @param top The String array to be first
+     * @param bottom The String array to be second
+     * @param lineSeparator An optional (nullable) separator to be put between the two arrays in the output
+     * @return A new array consisting of the top array, the lineSeparator if supplied, then the bottom array
+     */
+    public static String[] conjoinVertical(String[] top, String[] bottom, String lineSeparator) {
+        int offset = lineSeparator == null ? 0 : 1;
         
-        
-        String[] combined = new String[top.length + bottom.length + 1];
+        String[] combined = new String[top.length + bottom.length + offset];
         for (int i = 0; i < top.length; i++) {
             combined[i] = top[i];
         }
-        combined[top.length] = lineSeperator;
+        if (lineSeparator != null) {
+            combined[top.length] = lineSeparator;
+        }
         for (int i = 0; i < bottom.length; i++) {
-            combined[top.length + 1 + i] = bottom[i];
+            combined[top.length + offset + i] = bottom[i];
         }
         return combined;
     }
 
+    /**
+     * Checks if a board is won (all bombs are covered or flagged, and all non-bomb tiles are uncovered)
+     * @param board the board to check
+     * @return true if the game is won, and false otherwise
+     */
     public static boolean checkWin(Tensor<Tile> board) {
         boolean[] won = new boolean[] {true};
         board.forEach(
