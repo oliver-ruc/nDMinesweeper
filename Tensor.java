@@ -9,6 +9,12 @@ import java.util.function.Supplier;
  * each of the dimensions of the Tensor. The Tensor 
  * can be indexed through an int array to get the
  * element of the Tensor at a certain set of indices.
+ * <p>
+ * A Tensor provides functionality over a regular
+ * mutli-dimensional array in Java by allowing for
+ * easier indexing (using int arrays) and methods 
+ * to help iterate over all the elements in the 
+ * Tensor or just specific elements.
  */
 public class Tensor<T> {
     private ArrayList<T> members;
