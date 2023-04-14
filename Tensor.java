@@ -2,6 +2,8 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * A Tensor is an mutli-dimensional array that has a 
@@ -89,7 +91,7 @@ public class Tensor<T> {
      * @return The new Tensor
      */
     public static <T> Tensor<T> fill(T fillValue, int ... dimensions) {
-        return new Tensor<T>(() -> {return fillValue;}, dimensions);
+        return new Tensor<T>(() -> fillValue, dimensions);
     }
 
     /**
@@ -193,7 +195,7 @@ public class Tensor<T> {
     /**
      * Returns the first indices of the given object. 
      * Specifically, returns the first element (when traversed in row-major order) where obj.equal(element) is true
-     * @param obj the object to find in the Tnesor
+     * @param obj the object to find in the Tensor
      * @return the given indices of the object, or null if none is found
      */
     public int[] firstIndicesOf(T obj) {
@@ -209,7 +211,7 @@ public class Tensor<T> {
 
     /**
      * Checks whether the given indices are within the bounds of the Tensor. 
-     * Does not check length of the given indices, but will throw an error if they are wrong
+     * Returns false if given indices do not have same dimension as the Tensor.
      * @param indices the indices to check
      * @return a boolean that is true if and only if the indices are within the bounds of the tensor
      */
@@ -217,11 +219,8 @@ public class Tensor<T> {
         if (indices.length != numDimensions) {
             return false;
         }
-        boolean inBounds = true;
-        for (int i = 0; i < numDimensions; i++) {
-            inBounds &= indices[i] >= 0 && indices[i] < dimensions[i];
-        }
-        return inBounds;
+        return IntStream.range(0, numDimensions)
+            .allMatch(i -> indices[i] >= 0 && indices[i] < dimensions[i]);
     }
 
     /**
@@ -238,6 +237,10 @@ public class Tensor<T> {
                 "Indices " + nDMinesweeper.printInts(indices) + " is out of bounds for tensor with dimensions " + nDMinesweeper.printInts(dimensions)
             );
         }
+    }
+
+    public Stream<T> stream() {
+        return members.stream();
     }
 
     /* TODO: Finish

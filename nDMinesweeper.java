@@ -10,20 +10,22 @@ public class nDMinesweeper {
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
 
-        int[] dimensions;
+        int[] dimensionsInput;
         while (true) {
             System.out.println("Please put board dimensions (separated by spaces)");
             String[] inputDimensions = sc.nextLine().split(" ");
-            dimensions = new int[inputDimensions.length];
+            dimensionsInput = new int[inputDimensions.length];
             try {
                 for (int i = 0; i < inputDimensions.length; i++) {
-                    dimensions[i] = Integer.parseInt(inputDimensions[i]);
+                    dimensionsInput[i] = Integer.parseInt(inputDimensions[i]);
                 }
                 break;
             } catch (NumberFormatException e) {
                 System.out.println("Bad dimensions input");
             }
         }
+
+        final int[] dimensions = dimensionsInput;
         
         Tensor<Tile> board = new Tensor<>(
             Tile::new,
@@ -51,21 +53,13 @@ public class nDMinesweeper {
         IntStream.range(0, board.getDimensionTotal()).forEach(e -> shuffledTileIndices.add(e));
         Collections.shuffle(shuffledTileIndices);
 
-        for (int i = 0; i < bombs; i++) {
-            int[] indicies = board.getDimensionIndices(shuffledTileIndices.get(i));
-            Tile tile = board.get(indicies);
-            tile.isBomb = true;
-
-            Set<int[]> neighbors = getNeighbors(
-                indicies, 
-                dimensions
-            );
-
-            for (int[] neighbor : neighbors) {
-                Tile tileNeighbor = board.get(neighbor);
-                tileNeighbor.numNeighbors += 1;
-            }
-        }
+        shuffledTileIndices.subList(0, bombs)
+                            .stream()
+                            .map(i -> board.getDimensionIndices(i))
+                            .map(i -> {
+                                board.get(i).isBomb = true; 
+                                return getNeighbors(i, dimensions);
+                            }).forEach(s -> s.forEach(i -> board.get(i).numNeighbors++));
 
         printBoard(board);
 
@@ -123,26 +117,20 @@ public class nDMinesweeper {
             if (!chosen.isBomb && chosen.tileState == TileState.UNCOVERED && chosen.numNeighbors == 0) {
                 Set<Tile> fillUncover = new HashSet<>();
                 fillUncover.add(chosen);
-
                 Set<Tile> checked = new HashSet<>();
                 while (checked.size() < fillUncover.size()) {
-                    Set<Tile> toAdd = new HashSet<>();
-                    for(Tile tile : fillUncover) {
-                        if (checked.contains(tile)) {
-                            continue;
-                        }
-                        tile.tileState = TileState.UNCOVERED;
-                        checked.add(tile);
-                        if (tile.numNeighbors == 0) {
-                            int[] tileIndices = board.firstIndicesOf(tile);
-                            toAdd.addAll(
-                                getNeighbors(tileIndices, dimensions).stream().map(
-                                    (int[] ints) -> {return board.get(ints);}
-                                ).collect(Collectors.toList())
-                            );
-                        }
-                    }
-                    fillUncover.addAll(toAdd);
+                    fillUncover.stream()
+                        .filter(t -> !checked.contains(t))
+                        .filter(t -> {
+                            t.tileState = TileState.UNCOVERED;
+                            checked.add(t);
+                            return t.numNeighbors == 0;
+                        }).map(t -> getNeighbors(board.firstIndicesOf(t), dimensions))
+                        .forEach(s -> 
+                            fillUncover.addAll(
+                                s.stream().map(i -> board.get(i)).collect(Collectors.toSet())
+                            )
+                        );
                 }
             }
 
@@ -172,11 +160,8 @@ public class nDMinesweeper {
         if (first.equals(second)) {
             return false;
         }
-        boolean result = true;
-        for (int i = 0; i < first.length; i++) {
-            result &= Math.abs(first[i] - second[i]) <= 1;
-        }
-        return result;
+        return IntStream.range(0, first.length)
+            .allMatch(i -> Math.abs(first[i] - second[i]) <= 1);
     }
 
     /**
@@ -479,16 +464,7 @@ public class nDMinesweeper {
      * @return true if the game is won, and false otherwise
      */
     public static boolean checkWin(Tensor<Tile> board) {
-        boolean[] won = new boolean[] {true};
-        board.forEach(
-            (Tile t) -> {
-                if (t.isBomb) {
-                    won[0] &= t.tileState == TileState.COVERED || t.tileState == TileState.FLAGGED;
-                } else {
-                    won[0] &= t.tileState == TileState.UNCOVERED;
-                }
-            }
-        );
-        return won[0];
+        return board.stream().allMatch(t -> (t.isBomb && (t.tileState == TileState.COVERED || t.tileState == TileState.FLAGGED)) 
+            || (!t.isBomb && t.tileState == TileState.UNCOVERED));
     }
 }
